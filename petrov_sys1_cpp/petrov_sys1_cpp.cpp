@@ -1,70 +1,176 @@
-﻿#include <windows.h>
-#include <iostream>
+﻿#include "SysProg.h"
 
 using namespace std;
 
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#endif
-
-HANDLE hEvents[100];
-CRITICAL_SECTION cs;
-
-DWORD WINAPI MyThread(LPVOID lpParam)
+enum MessageTypes
 {
-    int i = (intptr_t)lpParam; 
-    EnterCriticalSection(&cs);
-    cout << i << endl;
-    LeaveCriticalSection(&cs);
+	MT_CLOSE,
+	MT_DATA,
+};
 
-    WaitForSingleObject(hEvents[i], INFINITE);
-    cout << i << " done" << endl;
-    CloseHandle(hEvents[i]);
+struct MessageHeader
+{
+	int messageType;
+	int size;
+};
 
-    return 0;
+struct Message
+{
+	MessageHeader header = { 0 };
+	string data;
+	Message() = default;
+	Message(MessageTypes messageType, const string& data = "")
+		:data(data)
+	{
+		header = { messageType, int(data.length()) };
+	}
+};
+
+class Session
+{
+	queue<Message> messages;
+	CRITICAL_SECTION cs;
+	HANDLE hEvent;
+public:
+	int sessionID;
+
+	Session(int sessionID) :sessionID(sessionID)
+	{
+		InitializeCriticalSection(&cs);
+		hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	}
+
+	~Session()
+	{
+		DeleteCriticalSection(&cs);
+		CloseHandle(hEvent);
+	}
+
+	void addMessage(Message& m)
+	{
+		EnterCriticalSection(&cs);
+		messages.push(m);
+		SetEvent(hEvent);
+		LeaveCriticalSection(&cs);
+	}
+
+	bool getMessage(Message& m)
+	{
+		bool res = false;
+		WaitForSingleObject(hEvent, INFINITE);
+		EnterCriticalSection(&cs);
+		if (!messages.empty())
+		{
+			res = true;
+			m = messages.front();
+			messages.pop();
+		}
+		if (messages.empty())
+		{
+			ResetEvent(hEvent);
+		}
+		LeaveCriticalSection(&cs);
+		return res;
+	}
+
+	void addMessage(MessageTypes messageType, const string& data = "")
+	{
+		Message m(messageType, data);
+		addMessage(m);
+	}
+};
+
+DWORD WINAPI MyThread(LPVOID lpParameter)
+{
+	auto session = static_cast<Session*>(lpParameter);
+	EnterCriticalSection(&cs);
+	cout << "Session " << session->sessionID << " created" << endl;
+	LeaveCriticalSection(&cs);
+
+	while (true)
+	{
+		Message m;
+		if (session->getMessage(m))
+		{
+			switch (m.header.messageType)
+			{
+			case MT_CLOSE: {
+				EnterCriticalSection(&cs);
+				cout << "Session " << session->sessionID << " closed" << endl;
+				LeaveCriticalSection(&cs);
+				delete session;
+				return 0;
+			}
+			case MT_DATA: {
+				EnterCriticalSection(&cs);
+				cout << "Session " << session->sessionID << " data: " << m.data << endl;
+				LeaveCriticalSection(&cs);
+				Sleep(500 * session->sessionID);
+				break;
+			}
+			}
+		}
+	}
+	return 0;
 }
 
 void start()
 {
-    InitializeCriticalSection(&cs);
-    int i;
-    for (i = 0; i < 10; ++i)
-    {
-        hEvents[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
-        CreateThread(NULL, 0, MyThread, (LPVOID)(intptr_t)i, 0, NULL);
-    }
+	vector<Session*> sessions;
+	vector<HANDLE> threads;
+	InitializeCriticalSection(&cs);
 
-    HANDLE hStartEvent = CreateEventW(NULL, FALSE, FALSE, L"StartEvent");
-    HANDLE hStopEvent = CreateEventW(NULL, FALSE, FALSE, L"StopEvent");
-    HANDLE hConfirmEvent = CreateEventW(NULL, FALSE, FALSE, L"ConfirmEvent");
+	int sessionCounter = 1;
 
-    HANDLE hControlEvents[2] = { hStartEvent, hStopEvent };
-    while (i)
-    {
-        int n = WaitForMultipleObjects(2, hControlEvents, FALSE, INFINITE) - WAIT_OBJECT_0;
-        switch (n)
-        {
-        case 0:
-            hEvents[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
-            CreateThread(NULL, 0, MyThread, (LPVOID)(intptr_t)i, 0, NULL);
-            SetEvent(hConfirmEvent);
-            i++;
-            break;
-        case 1:
-            ResetEvent(hStopEvent);
-            SetEvent(hEvents[--i]);
-            SetEvent(hConfirmEvent);
-            break;
-        }
-    }
-    SetEvent(hConfirmEvent);
-    DeleteCriticalSection(&cs);
+	HANDLE hStartEvent = CreateEventW(NULL, FALSE, FALSE, L"StartEvent");
+	HANDLE hStopEvent = CreateEventW(NULL, FALSE, FALSE, L"StopEvent");
+	HANDLE hConfirmEvent = CreateEventW(NULL, FALSE, FALSE, L"ConfirmEvent");
+	HANDLE hCloseEvent = CreateEventW(NULL, FALSE, FALSE, L"CloseEvent");
+	HANDLE hControlEvents[3] = { hStartEvent, hStopEvent, hCloseEvent };
+
+	while (true)
+	{
+		int n = WaitForMultipleObjects(3, hControlEvents, FALSE, INFINITE) - WAIT_OBJECT_0;
+		switch (n)
+		{
+		case 0:
+			sessions.push_back(new Session(sessionCounter++));
+			threads.push_back(CreateThread(NULL, 0, MyThread, (LPVOID)sessions.back(), 0, NULL));
+			SetEvent(hConfirmEvent);
+			break;
+		case 1:
+			if (!sessions.empty())
+			{
+				sessions.back()->addMessage(MT_CLOSE);
+				WaitForSingleObject(threads.back(), INFINITE);
+				CloseHandle(threads.back());
+				sessions.pop_back();
+				threads.pop_back();
+				sessionCounter--;
+				SetEvent(hConfirmEvent);
+			}
+			break;
+		case 2:
+			while (!sessions.empty())
+			{
+				sessions.back()->addMessage(MT_CLOSE);
+				WaitForSingleObject(threads.back(), INFINITE);
+				CloseHandle(threads.back());
+				sessions.pop_back();
+				threads.pop_back();
+			}
+			CloseHandle(hStartEvent);
+			CloseHandle(hStopEvent);
+			CloseHandle(hConfirmEvent);
+			CloseHandle(hCloseEvent);
+			DeleteCriticalSection(&cs);
+			return;
+		}
+	}
 }
-
-
 
 int main()
 {
-    start();
-    return 0;
+	start();
+	return 0;
 }
