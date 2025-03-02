@@ -125,20 +125,19 @@ void start()
 	HANDLE hStartEvent = CreateEventW(NULL, FALSE, FALSE, L"StartEvent");
 	HANDLE hStopEvent = CreateEventW(NULL, FALSE, FALSE, L"StopEvent");
 	HANDLE hConfirmEvent = CreateEventW(NULL, FALSE, FALSE, L"ConfirmEvent");
-	HANDLE hCloseEvent = CreateEventW(NULL, FALSE, FALSE, L"CloseEvent");
-	HANDLE hControlEvents[3] = { hStartEvent, hStopEvent, hCloseEvent };
+	HANDLE hControlEvents[2] = { hStartEvent, hStopEvent }; 
 
 	while (true)
 	{
-		int n = WaitForMultipleObjects(3, hControlEvents, FALSE, INFINITE) - WAIT_OBJECT_0;
+		int n = WaitForMultipleObjects(2, hControlEvents, FALSE, INFINITE) - WAIT_OBJECT_0; 
 		switch (n)
 		{
-		case 0:
+		case 0: 
 			sessions.push_back(new Session(sessionCounter++));
 			threads.push_back(CreateThread(NULL, 0, MyThread, (LPVOID)sessions.back(), 0, NULL));
 			SetEvent(hConfirmEvent);
 			break;
-		case 1:
+		case 1: 
 			if (!sessions.empty())
 			{
 				sessions.back()->addMessage(MT_CLOSE);
@@ -149,22 +148,15 @@ void start()
 				sessionCounter--;
 				SetEvent(hConfirmEvent);
 			}
-			break;
-		case 2:
-			while (!sessions.empty())
+			if (sessions.empty())
 			{
-				sessions.back()->addMessage(MT_CLOSE);
-				WaitForSingleObject(threads.back(), INFINITE);
-				CloseHandle(threads.back());
-				sessions.pop_back();
-				threads.pop_back();
+				CloseHandle(hStartEvent);
+				CloseHandle(hStopEvent);
+				CloseHandle(hConfirmEvent);
+				DeleteCriticalSection(&cs);
+				return;
 			}
-			CloseHandle(hStartEvent);
-			CloseHandle(hStopEvent);
-			CloseHandle(hConfirmEvent);
-			CloseHandle(hCloseEvent);
-			DeleteCriticalSection(&cs);
-			return;
+			break;
 		}
 	}
 }
