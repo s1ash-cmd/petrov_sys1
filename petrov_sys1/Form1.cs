@@ -24,18 +24,51 @@ namespace petrov_sys1
         public Form1()
         {
             InitializeComponent();
+            this.FormClosing += Form1_Closing;
         }
 
-        int session_index = 1;
+        private void Form1_Closing(object sender, FormClosingEventArgs e)
+        {
+            if (childProcess != null && !childProcess.HasExited)
+            {
+                closeEvent.Set();  
+                childProcess = null;
+            }
+        }
+                           
         int session_num = 10;
         int active_sessions = 0;
+
+        private void ChildProcess_Exited(object sender, EventArgs e)
+        {
+            if (InvokeRequired)
+            {
+                this.Invoke(new Action(() =>
+                {
+                    session_box.Items.Clear();
+                    active_sessions = 0; 
+                    childProcess = null;
+                }));
+            }
+            else
+            {
+                session_box.Items.Clear();
+                active_sessions = 0;
+                childProcess = null;
+            }
+        }
+
 
         private void button_start_Click(object sender, EventArgs e)
         {
             if (childProcess == null || childProcess.HasExited)
             {
-                childProcess = Process.Start("petrov_sys1_cpp.exe");
+                childProcess = Process.Start("\"C:\\Users\\s1ash\\source\\repos\\petrov_sys1\\Debug\\petrov_sys1_cpp.exe\"");
+                childProcess.EnableRaisingEvents = true;
+                childProcess.Exited += ChildProcess_Exited;
             }
+
+
 
             for (int i = 0; i < session_num; i++)
             {
@@ -52,6 +85,7 @@ namespace petrov_sys1
             {
                 session_box.Items.Add($"Поток № {i}");
             }
+
 
             session_box.TopIndex = session_box.Items.Count - 1;
         }
