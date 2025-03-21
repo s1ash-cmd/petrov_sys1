@@ -10,4 +10,15 @@
 // Добавьте сюда заголовочные файлы для предварительной компиляции
 #include "framework.h"
 
+#include <fstream>
+#include <sstream>
+#include <memory>
+#include <windows.h>
+#include <conio.h>
+#include <iostream>
+#include <string>
+#include <mutex>
+
+using namespace std;
+
 #endif //PCH_H

@@ -36,11 +36,12 @@
             this.button_add = new System.Windows.Forms.Button();
             this.button_send = new System.Windows.Forms.Button();
             this.session_count = new System.Windows.Forms.Label();
+            this.textbox_message = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // button_start
             // 
-            this.button_start.Location = new System.Drawing.Point(14, 447);
+            this.button_start.Location = new System.Drawing.Point(14, 432);
             this.button_start.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.button_start.Name = "button_start";
             this.button_start.Size = new System.Drawing.Size(85, 50);
@@ -52,7 +53,7 @@
             // button_stop
             // 
             this.button_stop.Font = new System.Drawing.Font("Comfortaa", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.button_stop.Location = new System.Drawing.Point(109, 447);
+            this.button_stop.Location = new System.Drawing.Point(109, 432);
             this.button_stop.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.button_stop.Name = "button_stop";
             this.button_stop.Size = new System.Drawing.Size(85, 50);
@@ -64,16 +65,16 @@
             // session_box
             // 
             this.session_box.FormattingEnabled = true;
-            this.session_box.ItemHeight = 38;
+            this.session_box.ItemHeight = 24;
             this.session_box.Location = new System.Drawing.Point(14, 12);
             this.session_box.Name = "session_box";
-            this.session_box.Size = new System.Drawing.Size(453, 384);
+            this.session_box.Size = new System.Drawing.Size(453, 292);
             this.session_box.TabIndex = 2;
             // 
             // button_delete
             // 
             this.button_delete.Font = new System.Drawing.Font("Comfortaa", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.button_delete.Location = new System.Drawing.Point(202, 447);
+            this.button_delete.Location = new System.Drawing.Point(202, 432);
             this.button_delete.Name = "button_delete";
             this.button_delete.Size = new System.Drawing.Size(50, 50);
             this.button_delete.TabIndex = 3;
@@ -84,7 +85,7 @@
             // button_add
             // 
             this.button_add.Font = new System.Drawing.Font("Comfortaa", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.button_add.Location = new System.Drawing.Point(324, 447);
+            this.button_add.Location = new System.Drawing.Point(324, 432);
             this.button_add.Name = "button_add";
             this.button_add.Size = new System.Drawing.Size(50, 50);
             this.button_add.TabIndex = 4;
@@ -95,31 +96,42 @@
             // button_send
             // 
             this.button_send.Font = new System.Drawing.Font("Comfortaa", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.button_send.Location = new System.Drawing.Point(382, 446);
+            this.button_send.Location = new System.Drawing.Point(382, 431);
             this.button_send.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.button_send.Name = "button_send";
             this.button_send.Size = new System.Drawing.Size(85, 50);
             this.button_send.TabIndex = 5;
             this.button_send.Text = "Send";
             this.button_send.UseVisualStyleBackColor = true;
-            // 
+            this.button_send.Click += new System.EventHandler(this.button_send_Click);
+            //
             // session_count
-            // 
+            //
             this.session_count.BackColor = System.Drawing.SystemColors.GradientInactiveCaption;
             this.session_count.Font = new System.Drawing.Font("Comfortaa", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.session_count.Location = new System.Drawing.Point(258, 447);
+            this.session_count.Location = new System.Drawing.Point(258, 432);
             this.session_count.Name = "session_count";
             this.session_count.Size = new System.Drawing.Size(60, 50);
             this.session_count.TabIndex = 6;
             this.session_count.Text = "10";
             this.session_count.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            //
+            // textbox_message
+            //
+            this.textbox_message.Location = new System.Drawing.Point(14, 311);
+            this.textbox_message.Multiline = true;
+            this.textbox_message.Name = "textbox_message";
+            this.textbox_message.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.textbox_message.Size = new System.Drawing.Size(453, 111);
+            this.textbox_message.TabIndex = 7;
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(15F, 38F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 24F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Control;
-            this.ClientSize = new System.Drawing.Size(481, 511);
+            this.ClientSize = new System.Drawing.Size(481, 492);
+            this.Controls.Add(this.textbox_message);
             this.Controls.Add(this.session_count);
             this.Controls.Add(this.button_send);
             this.Controls.Add(this.button_add);
@@ -134,7 +146,10 @@
             this.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.Name = "Form1";
             this.ResumeLayout(false);
+            this.PerformLayout();
         }
+
+        private System.Windows.Forms.TextBox textbox_message;
 
         #endregion
 

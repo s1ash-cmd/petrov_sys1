@@ -6,17 +6,22 @@
 #include <vector>
 #include <queue>
 #include <string>
+#include <io.h>
+#include <fcntl.h>
+#include <thread>
+#include <locale>
+#include <codecvt>
 
 using namespace std;
 
 inline void DoWrite()
 {
-	std::cout << std::endl;
+	wcout << endl;
 }
 
 template <class T, typename... Args> inline void DoWrite(T& value, Args... args)
 {
-	std::cout << value << " ";
+	wcout << value << " ";
 	DoWrite(args...);
 }
 

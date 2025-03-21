@@ -1,123 +1,116 @@
-﻿#include "SysProg.h"
+﻿#include "C:\Users\s1ash\source\repos\petrov_sys1\petrov_dll\dllmain.cpp"
+#include "SysProg.h"
 
 using namespace std;
 
-enum MessageTypes
-{
+enum MessageTypes {
 	MT_CLOSE,
 	MT_DATA,
 };
 
-struct MessageHeader
-{
+struct MessageHeader {
 	int messageType;
 	int size;
 };
 
-struct Message
-{
+struct Message {
 	MessageHeader header = { 0 };
-	string data;
+	wstring data;
 	Message() = default;
-	Message(MessageTypes messageType, const string& data = "")
-		:data(data)
-	{
-		header = { messageType, int(data.length()) };
+	Message(MessageTypes messageType, const wstring& data = L"") : data(data) {
+		header = { messageType, static_cast<int>(data.length()) };
 	}
 };
 
-class Session
-{
+class Session {
 	queue<Message> messages;
 	CRITICAL_SECTION cs;
 	HANDLE hEvent;
+
 public:
 	int sessionID;
 
-	Session(int sessionID) :sessionID(sessionID)
-	{
+	Session(int sessionID) : sessionID(sessionID) {
 		InitializeCriticalSection(&cs);
-		hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+		hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
 	}
 
-	~Session()
-	{
+	~Session() {
 		DeleteCriticalSection(&cs);
 		CloseHandle(hEvent);
 	}
 
-	void addMessage(Message& m)
-	{
+	void addMessage(Message& m) {
 		EnterCriticalSection(&cs);
 		messages.push(m);
 		SetEvent(hEvent);
 		LeaveCriticalSection(&cs);
 	}
 
-	bool getMessage(Message& m)
-	{
+	bool getMessage(Message& m) {
 		bool res = false;
 		WaitForSingleObject(hEvent, INFINITE);
 		EnterCriticalSection(&cs);
-		if (!messages.empty())
-		{
+		if (!messages.empty()) {
 			res = true;
 			m = messages.front();
 			messages.pop();
 		}
-		if (messages.empty())
-		{
+		if (messages.empty()) {
 			ResetEvent(hEvent);
 		}
 		LeaveCriticalSection(&cs);
 		return res;
 	}
 
-	void addMessage(MessageTypes messageType, const string& data = "")
-	{
+	void addMessage(MessageTypes messageType, const wstring& data = L"") {
 		Message m(messageType, data);
 		addMessage(m);
 	}
 };
 
-DWORD WINAPI MyThread(LPVOID lpParameter)
-{
-	auto session = static_cast<Session*>(lpParameter);
+void MyThread(Session* session) {
 	EnterCriticalSection(&cs);
-	cout << "Session " << session->sessionID << " created" << endl;
+	wcout << L"Сессия " << session->sessionID << L" создана" << endl;
 	LeaveCriticalSection(&cs);
 
-	while (true)
-	{
+	while (true) {
 		Message m;
-		if (session->getMessage(m))
-		{
-			switch (m.header.messageType)
-			{
-			case MT_CLOSE: {
+		if (session->getMessage(m)) {
+			switch (m.header.messageType) {
+			case MT_CLOSE:
 				EnterCriticalSection(&cs);
-				cout << "Session " << session->sessionID << " closed" << endl;
+				wcout << L"Сессия " << session->sessionID << L" закрыта" << endl;
 				LeaveCriticalSection(&cs);
 				delete session;
-				return 0;
-			}
+				return;
 			case MT_DATA: {
-				EnterCriticalSection(&cs);
-				cout << "Session " << session->sessionID << " data: " << m.data << endl;
-				LeaveCriticalSection(&cs);
+				if (session->sessionID >= 0) {
+					wstring filename = to_wstring(session->sessionID) + L".txt";
+					wofstream fout(filename, ios::app);
+
+					fout.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
+
+					if (!fout.is_open()) {
+						wcout << L"Ошибка открытия файла: " << filename << endl;
+					}
+					else {
+						fout << m.data << L"\n";
+						fout.flush();
+						fout.close();
+					}
+				}
 				Sleep(500 * session->sessionID);
 				break;
 			}
 			}
 		}
 	}
-	return 0;
 }
 
-void start()
-{
+void start() {
 	vector<Session*> sessions;
-	vector<HANDLE> threads;
+	vector<thread> threads;
 	InitializeCriticalSection(&cs);
 
 	int sessionCounter = 1;
@@ -125,52 +118,75 @@ void start()
 	HANDLE hStartEvent = CreateEventW(NULL, FALSE, FALSE, L"StartEvent");
 	HANDLE hStopEvent = CreateEventW(NULL, FALSE, FALSE, L"StopEvent");
 	HANDLE hConfirmEvent = CreateEventW(NULL, FALSE, FALSE, L"ConfirmEvent");
+	HANDLE hSendEvent = CreateEventW(NULL, FALSE, FALSE, L"SendEvent");
 	HANDLE hCloseEvent = CreateEventW(NULL, FALSE, FALSE, L"CloseEvent");
-	HANDLE hControlEvents[3] = { hStartEvent, hStopEvent, hCloseEvent };
+	HANDLE hControlEvents[4] = { hStartEvent, hStopEvent, hSendEvent, hCloseEvent };
 
-	while (true)
-	{
-		int n = WaitForMultipleObjects(3, hControlEvents, FALSE, INFINITE) - WAIT_OBJECT_0;
-		switch (n)
-		{
-		case 0:
+	_setmode(_fileno(stdout), _O_U16TEXT);
+
+	while (true) {
+		int n = WaitForMultipleObjects(4, hControlEvents, FALSE, INFINITE) -
+			WAIT_OBJECT_0;
+
+		switch (n) {
+		case 0: {
 			sessions.push_back(new Session(sessionCounter++));
-//todo сделать не так
-			threads.push_back(CreateThread(NULL, 0, MyThread, (LPVOID)sessions.back(), 0, NULL));
+			threads.emplace_back(MyThread, sessions.back());
 			SetEvent(hConfirmEvent);
 			break;
-		case 1:
-			if (!sessions.empty())
-			{
+		}
+		case 1: {
+			if (!sessions.empty()) {
 				sessions.back()->addMessage(MT_CLOSE);
-				WaitForSingleObject(threads.back(), INFINITE);
-				CloseHandle(threads.back());
+				threads.back().join();
 				sessions.pop_back();
 				threads.pop_back();
 				sessionCounter--;
 				SetEvent(hConfirmEvent);
 			}
-			if (sessions.empty())
-			{
+			if (sessions.empty()) {
 				CloseHandle(hStartEvent);
 				CloseHandle(hStopEvent);
 				CloseHandle(hConfirmEvent);
+				CloseHandle(hCloseEvent);
 				DeleteCriticalSection(&cs);
 				return;
 			}
-			break;
+		} break;
 
-		case 2: 
+		case 2: {
+			header h;
+			wstring data = mapreceive(h);
+			wstring message(data.begin(), data.end());
+			if (h.addr == -2) {
+				for (auto& sess : sessions)
+					sess->addMessage(MT_DATA, message);
+				SafeWrite(L"Главный поток: " + message);
+			}
+			else if (h.addr == -1) {
+				SafeWrite(L"Главный поток: " + message);
+			}
+			else {
+				int index = h.addr;
+				if (index >= 0 && index < sessions.size()) {
+					sessions[index]->addMessage(MT_DATA, message);
+				}
+			}
+			ResetEvent(hSendEvent);
+			SetEvent(hConfirmEvent);
+			break;
+		}
+
+		case 3: {
 			SetEvent(hCloseEvent);
 			return;
 			break;
 		}
-
+		}
 	}
 }
 
-int main()
-{
+int main() {
 	start();
 	return 0;
 }
