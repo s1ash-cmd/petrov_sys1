@@ -123,5 +123,10 @@ namespace petrov_sys1
                 session_count.Text = $"{session_num}";
             }
         }
+
+        private void session_box_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

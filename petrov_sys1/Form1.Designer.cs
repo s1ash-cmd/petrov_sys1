@@ -23,8 +23,8 @@
         #region Код, автоматически созданный конструктором форм Windows
 
         /// <summary>
-        /// Требуемый метод для поддержки конструктора — не изменяйте 
-        /// содержимое этого метода с помощью редактора кода.
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
         /// </summary>
         private void InitializeComponent()
         {
@@ -64,10 +64,10 @@
             // session_box
             // 
             this.session_box.FormattingEnabled = true;
-            this.session_box.ItemHeight = 24;
+            this.session_box.ItemHeight = 38;
             this.session_box.Location = new System.Drawing.Point(14, 12);
             this.session_box.Name = "session_box";
-            this.session_box.Size = new System.Drawing.Size(453, 412);
+            this.session_box.Size = new System.Drawing.Size(453, 384);
             this.session_box.TabIndex = 2;
             // 
             // button_delete
@@ -102,7 +102,6 @@
             this.button_send.TabIndex = 5;
             this.button_send.Text = "Send";
             this.button_send.UseVisualStyleBackColor = true;
-            
             // 
             // session_count
             // 
@@ -117,8 +116,9 @@
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 24F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(15F, 38F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.SystemColors.Control;
             this.ClientSize = new System.Drawing.Size(481, 511);
             this.Controls.Add(this.session_count);
             this.Controls.Add(this.button_send);
@@ -130,11 +130,10 @@
             this.Font = new System.Drawing.Font("Comfortaa", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.Location = new System.Drawing.Point(15, 15);
             this.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.Name = "Form1";
-            this.Text = "Петров Дмитрий АС-22-04 ЛР1";
             this.ResumeLayout(false);
-
         }
 
         #endregion

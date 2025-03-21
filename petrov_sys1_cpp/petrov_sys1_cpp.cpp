@@ -135,6 +135,7 @@ void start()
 		{
 		case 0:
 			sessions.push_back(new Session(sessionCounter++));
+//todo сделать не так
 			threads.push_back(CreateThread(NULL, 0, MyThread, (LPVOID)sessions.back(), 0, NULL));
 			SetEvent(hConfirmEvent);
 			break;
