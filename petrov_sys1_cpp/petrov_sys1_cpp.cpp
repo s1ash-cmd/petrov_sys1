@@ -152,25 +152,31 @@ void start() {
 				DeleteCriticalSection(&cs);
 				return;
 			}
-		} break;
+				break;
+		}
 
 		case 2: {
-			header h;
-			wstring data = mapreceive(h);
+		header h;
+		wstring data = ReceiveData(h);
+
 			wstring message(data.begin(), data.end());
 			if (h.addr == -2) {
 				for (auto& sess : sessions)
 					sess->addMessage(MT_DATA, message);
+
 				SafeWrite(L"Главный поток: " + message);
+				SafeWrite(L"Сообщение записано в файлы для каждого потока");
 			}
 			else if (h.addr == -1) {
 				SafeWrite(L"Главный поток: " + message);
 			}
 			else {
 				int index = h.addr;
-				if (index >= 0 && index < sessions.size()) {
+				if (index >= 0 && index < sessions.size())
+				{
 					sessions[index]->addMessage(MT_DATA, message);
 				}
+				SafeWrite(L"Сообщение записано в файл ", index + 1,L".txt");
 			}
 			ResetEvent(hSendEvent);
 			SetEvent(hConfirmEvent);

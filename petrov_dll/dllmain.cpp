@@ -18,7 +18,7 @@ struct header {
 	int size;
 };
 
-HANDLE hGlobalMutex = CreateMutexW(NULL, FALSE, L"GlobalFileMapMutex");
+HANDLE hMutex = CreateMutex(NULL, FALSE, L"GlobalFileMapMutex");
 
 wstring GetLastErrorString(DWORD ErrorID = 0) {
 	if (!ErrorID)
@@ -89,19 +89,18 @@ wstring mapreceive(header& h) {
 }
 
 extern "C" {
+	__declspec(dllexport) HANDLE __stdcall SendData(int addr, const wchar_t* str) {
+		WaitForSingleObject(hMutex, INFINITE);
+		HANDLE result = mapsend(addr, str);
+		ReleaseMutex(hMutex);
+		return result;
+	}
 
-	__declspec(dllexport) void __stdcall SendData(int selected_thread,
-		const wchar_t* text) {
-		WaitForSingleObject(hGlobalMutex, INFINITE);
-		mapsend(selected_thread, text);
-		ReleaseMutex(hGlobalMutex);
-
-		// if (hSendEvent != NULL)
-		// {
-		//     SetEvent(hSendEvent);
-		//     CloseHandle(hSendEvent);
-		// }
-	};
-
-	__declspec(dllimport) std::string getMessage(header& h);
+	__declspec(dllexport) wstring __stdcall ReceiveData(header& h) {
+		WaitForSingleObject(hMutex, INFINITE);
+		wstring result = mapreceive(h);
+		ReleaseMutex(hMutex);
+		return result;
+	}
 }
+
