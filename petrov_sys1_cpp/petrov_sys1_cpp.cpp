@@ -122,7 +122,9 @@ void start() {
 	HANDLE hCloseEvent = CreateEventW(NULL, FALSE, FALSE, L"CloseEvent");
 	HANDLE hControlEvents[4] = { hStartEvent, hStopEvent, hSendEvent, hCloseEvent };
 
-	_setmode(_fileno(stdout), _O_U16TEXT);
+	SetConsoleOutputCP(65001);
+	SetConsoleCP(65001);
+	wcout.imbue(locale("ru_RU.UTF-8"));
 
 	while (true) {
 		int n = WaitForMultipleObjects(4, hControlEvents, FALSE, INFINITE) -

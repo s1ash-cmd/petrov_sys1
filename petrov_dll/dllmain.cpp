@@ -18,7 +18,7 @@ struct header {
 	int size;
 };
 
-HANDLE hMutex = CreateMutex(NULL, FALSE, L"GlobalFileMapMutex");
+HANDLE hMutex = CreateMutexW(NULL, FALSE, L"GlobalFileMapMutex");
 
 wstring GetLastErrorString(DWORD ErrorID = 0) {
 	if (!ErrorID)
