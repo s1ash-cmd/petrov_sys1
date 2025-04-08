@@ -89,7 +89,7 @@ void MyThread(Session* session) {
 					wstring filename = to_wstring(session->sessionID) + L".txt";
 					wofstream fout(filename, ios::app);
 
-					fout.imbue(locale(locale(), new codecvt_utf8<wchar_t>));
+					fout.imbue(locale("ru_RU.UTF-8"));
 
 					if (!fout.is_open()) {
 						wcout << L"Ошибка открытия файла: " << filename << endl;
@@ -100,7 +100,7 @@ void MyThread(Session* session) {
 						fout.close();
 					}
 				}
-				Sleep(500 * session->sessionID);
+//send recive в класс сообщениий
 				break;
 			}
 			}
@@ -178,7 +178,7 @@ void start() {
 				{
 					sessions[index]->addMessage(MT_DATA, message);
 				}
-				SafeWrite(L"Сообщение записано в файл ", index + 1,L".txt");
+				SafeWrite(L"Сообщение записано в файл ", index + 1, L".txt");
 			}
 			ResetEvent(hSendEvent);
 			SetEvent(hConfirmEvent);
