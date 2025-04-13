@@ -23,7 +23,20 @@ namespace petrov_sys1
 
         [DllImport("user32.dll")]
         private static extern IntPtr SendMessage(IntPtr hWnd, int msg, bool wParam, int lParam);
+
+        [DllImport("user32.dll")]
+        private static extern int GetScrollPos(IntPtr hWnd, int nBar);
+
+        [DllImport("user32.dll")]
+        private static extern int SetScrollPos(IntPtr hWnd, int nBar, int nPos, bool bRedraw);
+
+        [DllImport("user32.dll")]
+        private static extern int SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+
         private const int WM_SETREDRAW = 0x000B;
+        private const int SB_VERT = 1;
+        private const int WM_VSCROLL = 0x0115;
+        private const int SB_THUMBPOSITION = 4;
 
         private System.Windows.Forms.Timer updateTimer;
 
@@ -32,7 +45,7 @@ namespace petrov_sys1
             InitializeComponent();
 
             updateTimer = new System.Windows.Forms.Timer();
-            updateTimer.Interval = 250;
+            updateTimer.Interval = 1000;
             updateTimer.Tick += UpdateSessionList;
             updateTimer.Start();
         }
@@ -146,6 +159,7 @@ namespace petrov_sys1
             {
                 string selectedItem = session_box.SelectedItem as string;
                 int selectedIndex = session_box.SelectedIndex;
+                int scrollPos = GetScrollPos(session_box.Handle, SB_VERT);
 
                 SendMessage(session_box.Handle, WM_SETREDRAW, false, 0);
 
@@ -164,20 +178,14 @@ namespace petrov_sys1
                 {
                     session_box.SelectedItem = selectedItem;
                 }
-                else
+                else if (selectedIndex >= 0 && selectedIndex < session_box.Items.Count)
                 {
-                    int maxValidIndex = session_box.Items.Count - 1;
-                    if (selectedIndex >= 0 && selectedIndex <= maxValidIndex)
-                    {
-                        session_box.SelectedIndex = selectedIndex;
-                    }
-                    else if (maxValidIndex >= 0)
-                    {
-                        session_box.SelectedIndex = maxValidIndex;
-                    }
+                    session_box.SelectedIndex = selectedIndex;
                 }
 
-                session_box.TopIndex = session_box.Items.Count - 1;
+                SetScrollPos(session_box.Handle, SB_VERT, scrollPos, true);
+                SendMessage(session_box.Handle, WM_VSCROLL, (SB_THUMBPOSITION + 0x10000 * scrollPos), 0);
+
                 active_sessions = sessionCount;
             }
             catch (Exception ex)
@@ -193,6 +201,5 @@ namespace petrov_sys1
                 session_box.Refresh();
             }
         }
-
     }
 }

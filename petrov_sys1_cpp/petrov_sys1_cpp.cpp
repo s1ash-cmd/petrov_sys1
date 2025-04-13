@@ -157,7 +157,7 @@ int main(int argc, char* argv[]) {
 	tcp::acceptor a(io, tcp::endpoint(tcp::v4(), port));
 	wcout << L"Сервер запущен (порт: " << port << ")" << endl;
 
-	int client_num = 2;
+	int client_num = 3;
 	for (int i = 0; i < client_num; i++) {
 		launchClient(L"C:/Users/s1ash/source/repos/petrov_sys1/Debug/petrov_sys1.exe");
 	}
