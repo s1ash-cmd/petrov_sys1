@@ -5,15 +5,11 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Windows.Forms.LinkLabel;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-
 
 namespace petrov_sys1
 {
@@ -25,6 +21,9 @@ namespace petrov_sys1
         [DllImport(@"C:\\Users\\s1ash\\source\\repos\\petrov_sys1\\x64\\Debug\\petrov_dll.dll", CharSet = CharSet.Unicode)]
         private static extern int getSessionCount();
 
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, bool wParam, int lParam);
+        private const int WM_SETREDRAW = 0x000B;
 
         private System.Windows.Forms.Timer updateTimer;
 
@@ -33,7 +32,7 @@ namespace petrov_sys1
             InitializeComponent();
 
             updateTimer = new System.Windows.Forms.Timer();
-            updateTimer.Interval = 1000;
+            updateTimer.Interval = 250;
             updateTimer.Tick += UpdateSessionList;
             updateTimer.Start();
         }
@@ -81,7 +80,6 @@ namespace petrov_sys1
             {
                 active_sessions--;
                 session_box.Items.RemoveAt(active_sessions + 2);
-
                 sendCommand(active_sessions, 1, "Завершить поток");
                 session_box.TopIndex = session_box.Items.Count - 1;
             }
@@ -146,6 +144,11 @@ namespace petrov_sys1
         {
             try
             {
+                string selectedItem = session_box.SelectedItem as string;
+                int selectedIndex = session_box.SelectedIndex;
+
+                SendMessage(session_box.Handle, WM_SETREDRAW, false, 0);
+
                 int sessionCount = getSessionCount();
 
                 session_box.Items.Clear();
@@ -155,6 +158,23 @@ namespace petrov_sys1
                 for (int i = 1; i <= sessionCount; i++)
                 {
                     session_box.Items.Add($"Поток {i}");
+                }
+
+                if (!string.IsNullOrEmpty(selectedItem) && session_box.Items.Contains(selectedItem))
+                {
+                    session_box.SelectedItem = selectedItem;
+                }
+                else
+                {
+                    int maxValidIndex = session_box.Items.Count - 1;
+                    if (selectedIndex >= 0 && selectedIndex <= maxValidIndex)
+                    {
+                        session_box.SelectedIndex = selectedIndex;
+                    }
+                    else if (maxValidIndex >= 0)
+                    {
+                        session_box.SelectedIndex = maxValidIndex;
+                    }
                 }
 
                 session_box.TopIndex = session_box.Items.Count - 1;
@@ -167,6 +187,12 @@ namespace petrov_sys1
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }
+            finally
+            {
+                SendMessage(session_box.Handle, WM_SETREDRAW, true, 0);
+                session_box.Refresh();
+            }
         }
+
     }
 }
