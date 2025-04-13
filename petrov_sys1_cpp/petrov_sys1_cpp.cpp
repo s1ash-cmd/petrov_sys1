@@ -1,73 +1,47 @@
 ﻿#include "../petrov_dll/dllmain.cpp"
+#include "../petrov_dll/asio.h"
 #include "SysProg.h"
 
 using namespace std;
 
-class Session {
-	queue<Message> messages;
-	CRITICAL_SECTION cs;
-	HANDLE hEvent;
+void launchClient(wstring path) {
+	wstring pathCopy = path;
 
-public:
-	int sessionID;
+	STARTUPINFOW si = { sizeof(si) };
+	PROCESS_INFORMATION pi;
 
-	Session(int sessionID) : sessionID(sessionID) {
-		InitializeCriticalSection(&cs);
-		hEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+	if (CreateProcessW(NULL, &pathCopy[0],
+		NULL, NULL, TRUE, CREATE_NEW_CONSOLE,
+		NULL, NULL, &si, &pi))
+	{
+		CloseHandle(pi.hThread);
+		CloseHandle(pi.hProcess);
 	}
-
-	~Session() {
-		DeleteCriticalSection(&cs);
-		CloseHandle(hEvent);
+	else
+	{
+		wcerr << L"Не удалось запустить клиент: " << path << endl;
 	}
+}
 
-	void addMessage(Message& m) {
-		EnterCriticalSection(&cs);
-		messages.push(m);
-		SetEvent(hEvent);
-		LeaveCriticalSection(&cs);
-	}
-
-	bool getMessage(Message& m) {
-		bool res = false;
-		WaitForSingleObject(hEvent, INFINITE);
-		EnterCriticalSection(&cs);
-		if (!messages.empty()) {
-			res = true;
-			m = messages.front();
-			messages.pop();
-		}
-		if (messages.empty()) {
-			ResetEvent(hEvent);
-		}
-		LeaveCriticalSection(&cs);
-		return res;
-	}
-
-	void addMessage(MessageTypes messageType, const wstring& data = L"") {
-		Message m(messageType, data);
-		addMessage(m);
-	}
-};
+vector<Session*> sessions;
+vector<thread> threads;
+mutex sessionsMutex;
 
 void MyThread(Session* session) {
-	EnterCriticalSection(&cs);
-	wcout << L"Сессия " << session->sessionID << L" создана" << endl;
-	LeaveCriticalSection(&cs);
+	SafeWrite(L"Сессия", session->sessionID + 1, L"создана");
 
 	while (true) {
 		Message m;
 		if (session->getMessage(m)) {
 			switch (m.header.messageType) {
-			case MT_CLOSE:
-				EnterCriticalSection(&cs);
-				wcout << L"Сессия " << session->sessionID << L" закрыта" << endl;
-				LeaveCriticalSection(&cs);
+			case MT_CLOSE: {
+				SafeWrite(L"Сессия", session->sessionID + 1, L"закрыта");
 				delete session;
 				return;
+			}
 			case MT_DATA: {
 				if (session->sessionID >= 0) {
-					wstring filename = to_wstring(session->sessionID) + L".txt";
+					wstring filename = to_wstring(session->sessionID + 1) + L".txt";
 					wofstream fout(filename, ios::app);
 
 					fout.imbue(locale("ru_RU.UTF-8"));
@@ -76,12 +50,10 @@ void MyThread(Session* session) {
 						wcout << L"Ошибка открытия файла: " << filename << endl;
 					}
 					else {
-						fout << m.data << L"\n";
-						fout.flush();
+						fout << m.data << "\n";
 						fout.close();
 					}
 				}
-				//send recive в класс сообщениий
 				break;
 			}
 			}
@@ -89,101 +61,105 @@ void MyThread(Session* session) {
 	}
 }
 
-void start() {
+void processClient(tcp::socket s) {
+	try {
+		Message m;
+		int code = m.receive(s);
+		// wcout << L"Получено сообщение: "
+		// 	<< m.header.messageType << L", размер: "
+		// 	<< m.header.size << L", код: "
+		// 	<< code << endl;
+
+		switch (code) {
+		case MT_INIT: {
+			unique_lock<mutex> lock(sessionsMutex);
+			int id = sessions.size();
+			Session* newSession = new Session(id);
+			sessions.push_back(newSession);
+			threads.emplace_back(MyThread, newSession);
+			threads.back().detach();
+			break;
+		}
+
+		case MT_EXIT: {
+			unique_lock<mutex> lock(sessionsMutex);
+			if (m.header.from == -1) {
+				for (auto& s : sessions) {
+					s->addMessage(MT_CLOSE);
+				}
+				sessions.clear();
+				threads.clear();
+			}
+			else {
+				int id = m.header.from;
+				if (id == sessions.size() - 1) {
+					sessions[id]->addMessage(MT_CLOSE);
+					sessions.pop_back();
+					threads.pop_back();
+				}
+
+			}
+			break;
+		}
+		case MT_SENDDATA: {
+			unique_lock<mutex> lock(sessionsMutex);
+
+			int id = m.header.from;
+			wstring text = m.data;
+
+			if (id == -1) {
+				SafeWrite(L"Главный поток: " + text);
+			}
+			else if (id == -2) {
+				SafeWrite(L"Главный поток: " + text);
+				SafeWrite(L"Сообщение записано в файлы для каждого потока");
+
+				for (auto session : sessions)
+					if (session)
+						session->addMessage(MT_DATA, text);
+			}
+			else if (id >= 0 && id < sessions.size() && sessions[id]) {
+				sessions[id]->addMessage(MT_DATA, text);
+				SafeWrite(L"Сообщение записано в файл ", id + 1, L".txt");
+			}
+			break;
+		}
+		case MT_GETDATA: {
+			unique_lock<mutex> lock(sessionsMutex);
+			//auto iSession = sessions.find(m.header.from);
+			//if (iSession != sessions.end())
+			//{
+			//	iSession->second->send(s);
+			//}
+			break;
+
+		}
+		}
+	}
+	catch (std::exception& e)
+	{
+		std::wcerr << "Возникала ошибка: " << e.what() << endl;
+	}
+}
+
+
+int main(int argc, char* argv[]) {
 	SetConsoleOutputCP(65001);
 	SetConsoleCP(65001);
 	wcout.imbue(locale("ru_RU.UTF-8"));
 
-	wcout << L"сервер запущен";
-	
-	vector<Session*> sessions;
-	vector<thread> threads;
-	InitializeCriticalSection(&cs);
+	int port = 12345;
+	boost::asio::io_context io;
+	tcp::acceptor a(io, tcp::endpoint(tcp::v4(), port));
+	wcout << L"Сервер запущен (порт: " << port << ")" << endl;
 
-	int sessionCounter = 1;
-
-	HANDLE hStartEvent = CreateEventW(NULL, FALSE, FALSE, L"StartEvent");
-	HANDLE hStopEvent = CreateEventW(NULL, FALSE, FALSE, L"StopEvent");
-	HANDLE hConfirmEvent = CreateEventW(NULL, FALSE, FALSE, L"ConfirmEvent");
-	HANDLE hSendEvent = CreateEventW(NULL, FALSE, FALSE, L"SendEvent");
-	HANDLE hCloseEvent = CreateEventW(NULL, FALSE, FALSE, L"CloseEvent");
-	HANDLE hControlEvents[4] = { hStartEvent, hStopEvent, hSendEvent, hCloseEvent };
-
-	
-
-	while (true) {
-		int n = WaitForMultipleObjects(4, hControlEvents, FALSE, INFINITE) -
-			WAIT_OBJECT_0;
-
-		switch (n) {
-		case 0: {
-			sessions.push_back(new Session(sessionCounter++));
-			threads.emplace_back(MyThread, sessions.back());
-			SetEvent(hConfirmEvent);
-			break;
-		}
-		case 1: {
-			if (!sessions.empty()) {
-				sessions.back()->addMessage(MT_CLOSE);
-				threads.back().join();
-				sessions.pop_back();
-				threads.pop_back();
-				sessionCounter--;
-				SetEvent(hConfirmEvent);
-			}
-			if (sessions.empty()) {
-				CloseHandle(hStartEvent);
-				CloseHandle(hStopEvent);
-				CloseHandle(hConfirmEvent);
-				CloseHandle(hCloseEvent);
-				DeleteCriticalSection(&cs);
-				return;
-			}
-			break;
-		}
-
-		case 2: {
-			header h;
-			wstring data = ReceiveData(h);
-
-			wstring message(data.begin(), data.end());
-			if (h.addr == -2) {
-				for (auto& sess : sessions)
-					sess->addMessage(MT_DATA, message);
-
-				SafeWrite(L"Главный поток: " + message);
-				SafeWrite(L"Сообщение записано в файлы для каждого потока");
-			}
-			else if (h.addr == -1) {
-				SafeWrite(L"Главный поток: " + message);
-			}
-			else {
-				int index = h.addr;
-				if (index >= 0 && index < sessions.size())
-				{
-					sessions[index]->addMessage(MT_DATA, message);
-				}
-				SafeWrite(L"Сообщение записано в файл ", index + 1, L".txt");
-			}
-			ResetEvent(hSendEvent);
-			SetEvent(hConfirmEvent);
-			break;
-		}
-
-		case 3: {
-			SetEvent(hCloseEvent);
-			return;
-			break;
-		}
-		}
+	int client_num = 1;
+	for (int i = 0; i < client_num; i++) {
+		launchClient(L"C:/Users/s1ash/source/repos/petrov_sys1/Debug/petrov_sys1.exe");
 	}
-}
 
-int main() {
-	
-
-
-	start();
-	
-	return 0;
+	while (true)
+	{
+		std::thread(processClient, a.accept()).detach();
+	}
 }

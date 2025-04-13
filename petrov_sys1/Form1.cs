@@ -38,35 +38,37 @@ namespace petrov_sys1
 
         private void button_start_Click(object sender, EventArgs e)
         {
-
-            for (int i = 0; i < session_num; i++)
+            if (session_box.Items.Count == 0)
             {
-                active_sessions++;
+                session_box.Items.Add("Главный поток");
+                session_box.Items.Add("Все потоки");
             }
 
-            session_box.Items.Clear();
-            session_box.Items.Add("Главный поток");
-            session_box.Items.Add("Все потоки");
-
-            for (int i = 1; i <= active_sessions; i++)
+            int current = session_box.Items.Count - 2;
+            for (int i = 1; i <= session_num; i++)
             {
-                session_box.Items.Add($"Поток {i}");
+                int threadNum = current + i;
+                sendCommand(threadNum - 1, 0, "Создать поток");
+                session_box.Items.Add($"Поток {threadNum}");
             }
+            active_sessions += session_num;
 
             session_box.TopIndex = session_box.Items.Count - 1;
         }
 
         private void button_stop_Click(object sender, EventArgs e)
         {
-            if (session_box.Items.Count <= 2)
-            {
-                sendCommand(-1, 1, "Завершить все ");
+            if (session_box.Items.Count <= 2) {
+                sendCommand(-1, 1, "Завершить все");
+                active_sessions = 0;
             }
-            else
-            {
-                int threadId = session_box.Items.Count - 3;
-                sendCommand(threadId, 1, "Завершить поток");
-                session_box.Items.RemoveAt(session_box.Items.Count - 1);
+            else {
+                active_sessions--;
+                session_box.Items.RemoveAt(active_sessions + 2);
+
+                sendCommand(active_sessions, 1, "Завершить поток");
+                session_box.TopIndex = session_box.Items.Count - 1;
+
             }
         }
 
@@ -113,7 +115,7 @@ namespace petrov_sys1
                     }
                 }
 
-                sendCommand(selectedThread, 3, textbox_message.Text);
+                sendCommand(selectedThread, 2, textbox_message.Text);
             }
             else
             {

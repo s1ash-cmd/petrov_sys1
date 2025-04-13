@@ -104,9 +104,9 @@
             this.button_send.Text = "Send";
             this.button_send.UseVisualStyleBackColor = true;
             this.button_send.Click += new System.EventHandler(this.button_send_Click);
-            //
+            // 
             // session_count
-            //
+            // 
             this.session_count.BackColor = System.Drawing.SystemColors.GradientInactiveCaption;
             this.session_count.Font = new System.Drawing.Font("Comfortaa", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.session_count.Location = new System.Drawing.Point(258, 432);
@@ -115,9 +115,9 @@
             this.session_count.TabIndex = 6;
             this.session_count.Text = "10";
             this.session_count.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            //
+            // 
             // textbox_message
-            //
+            // 
             this.textbox_message.Location = new System.Drawing.Point(14, 311);
             this.textbox_message.Multiline = true;
             this.textbox_message.Name = "textbox_message";
@@ -147,6 +147,7 @@
             this.Name = "Form1";
             this.ResumeLayout(false);
             this.PerformLayout();
+
         }
 
         private System.Windows.Forms.TextBox textbox_message;
