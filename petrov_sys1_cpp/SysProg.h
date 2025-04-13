@@ -1,27 +1,36 @@
 #pragma once
 
+#include "session.h"
+#include "message.h"
 #include <windows.h>
 #include <conio.h>
 #include <iostream>
 #include <vector>
 #include <queue>
-#include <string>
-#include <io.h>
-#include <fcntl.h>
+#include <string>w
+
+#include <map>
 #include <thread>
+#include <mutex>
+#include <shared_mutex>
+#include <condition_variable>
+
 #include <locale>
 #include <codecvt>
+#include <io.h>
+#include <fcntl.h>
+#include <corecrt_io.h>
 
 using namespace std;
 
 inline void DoWrite()
 {
-	wcout << endl;
+	std::wcout << std::endl;
 }
 
 template <class T, typename... Args> inline void DoWrite(T& value, Args... args)
 {
-	wcout << value << " ";
+	std::wcout << value << L" ";
 	DoWrite(args...);
 }
 
@@ -38,4 +47,3 @@ template <typename... Args> inline void SafeWrite(Args... args)
 	DoWrite(args...);
 	LeaveCriticalSection(&cs);
 }
-

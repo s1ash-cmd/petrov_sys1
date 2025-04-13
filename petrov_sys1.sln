@@ -10,9 +10,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "petrov_sys1", "petrov_sys1\
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "petrov_sys1_cpp", "petrov_sys1_cpp\petrov_sys1_cpp.vcxproj", "{E3F4182E-5837-468A-9F00-0B6E77C9E27F}"
-	ProjectSection(ProjectDependencies) = postProject
-		{43FCBA9E-D6E8-468F-83BB-5F99502AA05F} = {43FCBA9E-D6E8-468F-83BB-5F99502AA05F}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "petrov_dll", "petrov_dll\petrov_dll.vcxproj", "{43FCBA9E-D6E8-468F-83BB-5F99502AA05F}"
 EndProject

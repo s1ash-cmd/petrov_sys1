@@ -1,26 +1,7 @@
-﻿#include "C:\Users\s1ash\source\repos\petrov_sys1\petrov_dll\dllmain.cpp"
+﻿#include "../petrov_dll/dllmain.cpp"
 #include "SysProg.h"
 
 using namespace std;
-
-enum MessageTypes {
-	MT_CLOSE,
-	MT_DATA,
-};
-
-struct MessageHeader {
-	int messageType;
-	int size;
-};
-
-struct Message {
-	MessageHeader header = { 0 };
-	wstring data;
-	Message() = default;
-	Message(MessageTypes messageType, const wstring& data = L"") : data(data) {
-		header = { messageType, static_cast<int>(data.length()) };
-	}
-};
 
 class Session {
 	queue<Message> messages;
@@ -100,7 +81,7 @@ void MyThread(Session* session) {
 						fout.close();
 					}
 				}
-//send recive в класс сообщениий
+				//send recive в класс сообщениий
 				break;
 			}
 			}
@@ -109,6 +90,12 @@ void MyThread(Session* session) {
 }
 
 void start() {
+	SetConsoleOutputCP(65001);
+	SetConsoleCP(65001);
+	wcout.imbue(locale("ru_RU.UTF-8"));
+
+	wcout << L"сервер запущен";
+	
 	vector<Session*> sessions;
 	vector<thread> threads;
 	InitializeCriticalSection(&cs);
@@ -122,9 +109,7 @@ void start() {
 	HANDLE hCloseEvent = CreateEventW(NULL, FALSE, FALSE, L"CloseEvent");
 	HANDLE hControlEvents[4] = { hStartEvent, hStopEvent, hSendEvent, hCloseEvent };
 
-	SetConsoleOutputCP(65001);
-	SetConsoleCP(65001);
-	wcout.imbue(locale("ru_RU.UTF-8"));
+	
 
 	while (true) {
 		int n = WaitForMultipleObjects(4, hControlEvents, FALSE, INFINITE) -
@@ -154,12 +139,12 @@ void start() {
 				DeleteCriticalSection(&cs);
 				return;
 			}
-				break;
+			break;
 		}
 
 		case 2: {
-		header h;
-		wstring data = ReceiveData(h);
+			header h;
+			wstring data = ReceiveData(h);
 
 			wstring message(data.begin(), data.end());
 			if (h.addr == -2) {
@@ -195,6 +180,10 @@ void start() {
 }
 
 int main() {
+	
+
+
 	start();
+	
 	return 0;
 }

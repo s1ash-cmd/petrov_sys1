@@ -1,83 +1,46 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
 using System.Diagnostics;
+using System.Drawing;
+using System.Linq;
+using System.Reflection.Emit;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
-
+using static System.Windows.Forms.LinkLabel;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace petrov_sys1
 {
     public partial class Form1 : Form
     {
-        Process childProcess = null;
-        System.Threading.EventWaitHandle stopEvent = new EventWaitHandle(false, EventResetMode.AutoReset, "StopEvent");
 
-        System.Threading.EventWaitHandle
-            startEvent = new EventWaitHandle(false, EventResetMode.AutoReset, "StartEvent");
+        [DllImport(@"C:\\Users\\s1ash\\source\\repos\\petrov_sys1\\x64\\Debug\\petrov_dll.dll", CharSet = CharSet.Unicode)]
+        private static extern void connectClient(int selectedThread, string text);
 
-        System.Threading.EventWaitHandle confirmEvent =
-            new EventWaitHandle(false, EventResetMode.AutoReset, "ConfirmEvent");
+        [DllImport(@"C:\\Users\\s1ash\\source\\repos\\petrov_sys1\\x64\\Debug\\petrov_dll.dll", CharSet = CharSet.Unicode)]
+        private static extern void disconnectClient(int selectedThread, string text);
 
-        System.Threading.EventWaitHandle
-            closeEvent = new EventWaitHandle(false, EventResetMode.AutoReset, "CloseEvent");
-
-        System.Threading.EventWaitHandle sendEvent = new EventWaitHandle(false, EventResetMode.AutoReset, "SendEvent");
-
-        [DllImport(@"C:\\Users\\s1ash\\source\\repos\\petrov_sys1\\x64\\Debug\\petrov_dll.dll",
-            CharSet = CharSet.Unicode)]
-        private static extern void SendData(int selectedThread, string text);
+        [DllImport(@"C:\\Users\\s1ash\\source\\repos\\petrov_sys1\\x64\\Debug\\petrov_dll.dll", CharSet = CharSet.Unicode)]
+        private static extern void sendCommand(int selectedThread, int commandId, string message);
 
         public Form1()
         {
             InitializeComponent();
-            this.FormClosing += Form1_Closing;
-        }
-
-        private void Form1_Closing(object sender, FormClosingEventArgs e)
-        {
-            if (childProcess != null && !childProcess.HasExited)
-            {
-                closeEvent.Set();
-                childProcess = null;
-            }
         }
 
         int session_num = 10;
         int active_sessions = 0;
 
-        private void ChildProcess_Exited(object sender, EventArgs e)
-        {
-            if (InvokeRequired)
-            {
-                this.Invoke(new Action(() =>
-                {
-                    session_box.Items.Clear();
-                    active_sessions = 0;
-                    childProcess = null;
-                }));
-            }
-            else
-            {
-                session_box.Items.Clear();
-                active_sessions = 0;
-                childProcess = null;
-            }
-        }
-
         private void button_start_Click(object sender, EventArgs e)
         {
-            if (childProcess == null || childProcess.HasExited)
-            {
-                childProcess =
-                    Process.Start("C:\\Users\\s1ash\\source\\repos\\petrov_sys1\\Debug\\petrov_sys1_cpp.exe");
-                childProcess.EnableRaisingEvents = true;
-                childProcess.Exited += ChildProcess_Exited;
-            }
 
             for (int i = 0; i < session_num; i++)
             {
-                startEvent.Set();
-                confirmEvent.WaitOne();
                 active_sessions++;
             }
 
@@ -95,20 +58,15 @@ namespace petrov_sys1
 
         private void button_stop_Click(object sender, EventArgs e)
         {
-            if (!(childProcess == null || childProcess.HasExited || active_sessions == 0))
+            if (session_box.Items.Count <= 2)
             {
-                stopEvent.Set();
-                confirmEvent.WaitOne();
-                active_sessions--;
-                session_box.Items.RemoveAt(active_sessions + 2);
-                if (active_sessions == 0)
-                {
-                    session_box.Items.Clear();
-                }
-                else
-                {
-                    session_box.TopIndex = session_box.Items.Count - 1;
-                }
+                sendCommand(-1, 1, "Завершить все ");
+            }
+            else
+            {
+                int threadId = session_box.Items.Count - 3;
+                sendCommand(threadId, 1, "Завершить поток");
+                session_box.Items.RemoveAt(session_box.Items.Count - 1);
             }
         }
 
@@ -138,9 +96,9 @@ namespace petrov_sys1
                 return;
             }
 
-            int selectedThread = -2;
             if (session_box.SelectedItem != null)
             {
+                int selectedThread = -2;
                 string sel = session_box.SelectedItem.ToString();
                 if (sel == "Главный поток")
                 {
@@ -154,6 +112,8 @@ namespace petrov_sys1
                         selectedThread = threadNum - 1;
                     }
                 }
+
+                sendCommand(selectedThread, 3, textbox_message.Text);
             }
             else
             {
@@ -163,10 +123,6 @@ namespace petrov_sys1
                     MessageBoxIcon.Warning);
                 return;
             }
-
-            SendData(selectedThread, textbox_message.Text);
-            sendEvent.Set();
-            confirmEvent.WaitOne();
         }
     }
 }
