@@ -14,23 +14,28 @@ using System.Windows.Forms;
 using static System.Windows.Forms.LinkLabel;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
+
 namespace petrov_sys1
 {
     public partial class Form1 : Form
     {
-
-        [DllImport(@"C:\\Users\\s1ash\\source\\repos\\petrov_sys1\\x64\\Debug\\petrov_dll.dll", CharSet = CharSet.Unicode)]
-        private static extern void connectClient(int selectedThread, string text);
-
-        [DllImport(@"C:\\Users\\s1ash\\source\\repos\\petrov_sys1\\x64\\Debug\\petrov_dll.dll", CharSet = CharSet.Unicode)]
-        private static extern void disconnectClient(int selectedThread, string text);
-
         [DllImport(@"C:\\Users\\s1ash\\source\\repos\\petrov_sys1\\x64\\Debug\\petrov_dll.dll", CharSet = CharSet.Unicode)]
         private static extern void sendCommand(int selectedThread, int commandId, string message);
+
+        [DllImport(@"C:\\Users\\s1ash\\source\\repos\\petrov_sys1\\x64\\Debug\\petrov_dll.dll", CharSet = CharSet.Unicode)]
+        private static extern int getSessionCount();
+
+
+        private System.Windows.Forms.Timer updateTimer;
 
         public Form1()
         {
             InitializeComponent();
+
+            updateTimer = new System.Windows.Forms.Timer();
+            updateTimer.Interval = 1000;
+            updateTimer.Tick += UpdateSessionList;
+            updateTimer.Start();
         }
 
         int session_num = 10;
@@ -58,17 +63,27 @@ namespace petrov_sys1
 
         private void button_stop_Click(object sender, EventArgs e)
         {
-            if (session_box.Items.Count <= 2) {
+            if (active_sessions == 0)
+            {
+                MessageBox.Show("Нет активных потоков для остановки.",
+                    "Ошибка",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (session_box.Items.Count <= 2)
+            {
                 sendCommand(-1, 1, "Завершить все");
                 active_sessions = 0;
             }
-            else {
+            else
+            {
                 active_sessions--;
                 session_box.Items.RemoveAt(active_sessions + 2);
 
                 sendCommand(active_sessions, 1, "Завершить поток");
                 session_box.TopIndex = session_box.Items.Count - 1;
-
             }
         }
 
@@ -124,6 +139,33 @@ namespace petrov_sys1
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
                 return;
+            }
+        }
+
+        private void UpdateSessionList(object sender, EventArgs e)
+        {
+            try
+            {
+                int sessionCount = getSessionCount();
+
+                session_box.Items.Clear();
+                session_box.Items.Add("Главный поток");
+                session_box.Items.Add("Все потоки");
+
+                for (int i = 1; i <= sessionCount; i++)
+                {
+                    session_box.Items.Add($"Поток {i}");
+                }
+
+                session_box.TopIndex = session_box.Items.Count - 1;
+                active_sessions = sessionCount;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при обновлении списка сессий: {ex.Message}",
+                    "Ошибка",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
         }
     }

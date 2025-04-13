@@ -126,9 +126,18 @@ void processClient(tcp::socket s) {
 		}
 		case MT_GETDATA: {
 			unique_lock<mutex> lock(sessionsMutex);
+			int sessionCount = sessions.size();
 
+			MessageHeader responseHeader;
+			responseHeader.messageType = MT_GETDATA;
+			responseHeader.from = -1;
+			responseHeader.size = sizeof(int);
+
+			sendData(s, &responseHeader, sizeof(responseHeader));
+			sendData(s, &sessionCount, sizeof(int));
 			break;
 		}
+
 		}
 	}
 	catch (std::exception& e)
@@ -148,7 +157,7 @@ int main(int argc, char* argv[]) {
 	tcp::acceptor a(io, tcp::endpoint(tcp::v4(), port));
 	wcout << L"Сервер запущен (порт: " << port << ")" << endl;
 
-	int client_num = 1;
+	int client_num = 2;
 	for (int i = 0; i < client_num; i++) {
 		launchClient(L"C:/Users/s1ash/source/repos/petrov_sys1/Debug/petrov_sys1.exe");
 	}
