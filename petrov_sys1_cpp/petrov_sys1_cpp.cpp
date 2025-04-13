@@ -126,13 +126,8 @@ void processClient(tcp::socket s) {
 		}
 		case MT_GETDATA: {
 			unique_lock<mutex> lock(sessionsMutex);
-			//auto iSession = sessions.find(m.header.from);
-			//if (iSession != sessions.end())
-			//{
-			//	iSession->second->send(s);
-			//}
-			break;
 
+			break;
 		}
 		}
 	}

@@ -1,15 +1,19 @@
 #pragma once
 #include "message.h"
+#include <queue>
+#include <Windows.h>
 
 class Session {
-	queue<Message> messages;
+	std::queue<Message> messages;
 	CRITICAL_SECTION cs;
+	CONDITION_VARIABLE cv;
 
 public:
 	int sessionID;
 
 	Session(int sessionID) : sessionID(sessionID) {
 		InitializeCriticalSection(&cs);
+		InitializeConditionVariable(&cv);
 	}
 
 	~Session() {
@@ -19,22 +23,22 @@ public:
 	void addMessage(Message& m) {
 		EnterCriticalSection(&cs);
 		messages.push(m);
+		WakeConditionVariable(&cv);
 		LeaveCriticalSection(&cs);
 	}
 
 	bool getMessage(Message& m) {
-		bool res = false;
 		EnterCriticalSection(&cs);
-		if (!messages.empty()) {
-			res = true;
-			m = messages.front();
-			messages.pop();
+		while (messages.empty()) {
+			SleepConditionVariableCS(&cv, &cs, INFINITE);
 		}
+		m = messages.front();
+		messages.pop();
 		LeaveCriticalSection(&cs);
-		return res;
+		return true;
 	}
 
-	void addMessage(MessageTypes messageType, const wstring& data = L"") {
+	void addMessage(MessageTypes messageType, const std::wstring& data = L"") {
 		Message m(messageType, data);
 		addMessage(m);
 	}

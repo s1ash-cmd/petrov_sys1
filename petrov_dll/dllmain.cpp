@@ -30,7 +30,7 @@ extern "C" {
 			boost::asio::io_context io;
 			tcp::socket s(io);
 			tcp::resolver r(io);
-			boost::asio::connect(s, r.resolve("122.0.1.1", "12345"));
+			boost::asio::connect(s, r.resolve("127.0.0.1", "12345"));
 
 		}
 		catch (std::exception& e)
