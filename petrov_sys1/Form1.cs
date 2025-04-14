@@ -45,7 +45,7 @@ namespace petrov_sys1
             InitializeComponent();
 
             updateTimer = new System.Windows.Forms.Timer();
-            updateTimer.Interval = 1000;
+            updateTimer.Interval = 250;
             updateTimer.Tick += UpdateSessionList;
             updateTimer.Start();
         }
